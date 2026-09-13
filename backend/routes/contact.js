@@ -13,23 +13,30 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  connectionTimeout: 8000,
 });
 
 router.post("/", async (req, res) => {
+  const { name, email, phone, city, contentType, date, message } = req.body;
+
+  if (!name || !email || !phone || !city) {
+    return res.status(400).json({ error: "Missing required fields." });
+  }
+
+  let saved;
   try {
-    const { name, email, phone, city, contentType, date, message } = req.body;
-
-    if (!name || !email || !phone || !city) {
-      return res.status(400).json({ error: "Missing required fields." });
-    }
-
-    // 1. Save to database
-    const saved = await ContactRequest.create({
+    saved = await ContactRequest.create({
       name, email, phone, city, contentType, date, message,
     });
+  } catch (err) {
+    console.error("Database save error:", err);
+    return res.status(500).json({ error: "Could not save your request. Please try again." });
+  }
 
-    // 2. Notify your team by email (skips silently if SMTP isn't configured)
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+  res.status(201).json({ ok: true, id: saved._id });
+
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
       await transporter.sendMail({
         from: `"Reclick Media Website" <${process.env.SMTP_USER}>`,
         to: process.env.NOTIFY_TO_EMAIL,
@@ -44,12 +51,9 @@ Preferred date: ${date}
 Message: ${message}
         `.trim(),
       });
+    } catch (err) {
+      console.error("Email notification failed (lead was still saved):", err.message);
     }
-
-    res.status(201).json({ ok: true, id: saved._id });
-  } catch (err) {
-    console.error("Contact form error:", err);
-    res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });
 
