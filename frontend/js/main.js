@@ -19,7 +19,7 @@ if (navToggle) {
 // In production, put your real API domain here, e.g.
 //   const API_BASE_URL = "https://api.reclickmedia.com";
 // ---------------------------------------------------------
-const API_BASE_URL = "http://localhost:4000";
+const API_BASE_URL = "https://reclick-media-app-backend.onrender.com";
 
 const form = document.getElementById('contact-form');
 const status = document.getElementById('form-status');
